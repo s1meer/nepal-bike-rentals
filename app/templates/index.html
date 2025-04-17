@@ -1,0 +1,52 @@
+{% extends 'base.html' %}
+{% block title %}Hire Rates{% endblock %}
+{% block content %}
+  <section class="bg-blue-600 text-white py-16">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+      <h2 class="text-4xl font-bold mb-4">Motorbike Hire Rates in Nepal</h2>
+      <p class="text-lg mb-6">Explore our bikes and book your ride today!</p>
+    </div>
+  </section>
+  <section class="py-16">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <h2 class="text-3xl font-bold text-gray-800 mb-8 text-center">Bike Hire Rates</h2>
+      <form method="POST" action="{{ url_for('routes.filter_bikes') }}" class="flex justify-center space-x-4 mb-8">
+        <button type="submit" name="brand" value="all" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">All</button>
+        <button type="submit" name="brand" value="Royal Enfield" class="px-4 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300">Royal Enfield</button>
+        <button type="submit" name="brand" value="Pulsar" class="px-4 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300">Pulsar</button>
+        <button type="submit" name="brand" value="Honda" class="px-4 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300">Honda</button>
+      </form>
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+        {% for bike in bikes %}
+          <div class="bike-card bg-white rounded-lg shadow-md overflow-hidden">
+            <img src="{{ bike.image_url or 'https://via.placeholder.com/400x300' }}" alt="{{ bike.name }}" class="w-full h-48 object-cover">
+            <div class="p-4">
+              <h3 class="text-xl font-semibold text-gray-800">{{ bike.name }}</h3>
+              <p class="text-gray-600">Daily: NPR {{ bike.daily_rate }} | Weekly: NPR {{ bike.weekly_rate }} | Monthly: NPR {{ bike.monthly_rate }}</p>
+              {% if current_user.is_authenticated %}
+                <form method="POST" action="{{ url_for('routes.book') }}">
+                  <input type="hidden" name="bike_id" value="{{ bike.id }}">
+                  <div class="mt-4">
+                    <label for="date_{{ bike.id }}" class="block text-gray-700">Rental Date</label>
+                    <input type="date" id="date_{{ bike.id }}" name="date" class="w-full p-2 border rounded">
+                  </div>
+                  <div class="mt-4">
+                    <label for="duration_{{ bike.id }}" class="block text-gray-700">Duration</label>
+                    <select id="duration_{{ bike.id }}" name="duration" class="w-full p-2 border rounded">
+                      <option>Daily</option>
+                      <option>Weekly</option>
+                      <option>Monthly</option>
+                    </select>
+                  </div>
+                  <button type="submit" class="mt-4 w-full bg-blue-600 text-white p-2 rounded hover:bg-blue-700">Book Now</button>
+                </form>
+              {% else %}
+                <a href="{{ url_for('auth.login') }}" class="mt-4 inline-block w-full bg-blue-600 text-white p-2 rounded hover:bg-blue-700 text-center">Login to Book</a>
+              {% endif %}
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+  </section>
+{% endblock %}

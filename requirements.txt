@@ -1,0 +1,8 @@
+flask
+flask-login
+flask-sqlalchemy
+email-validator
+requests
+twilio
+razorpay
+werkzeug
