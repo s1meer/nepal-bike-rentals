@@ -3,7 +3,7 @@
 {% block content %}
   <section class="py-16">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-      <h2 class="text-3xl font-bold text-gray-800 mb-8">Admin Panel</h2>
+      <h2 class="text-3xl font-bold text-gray-800 mb-8 text-center">Admin Panel</h2>
       <!-- Add Bike -->
       <div class="bg-white rounded-lg shadow-md p-6 mb-8">
         <h3 class="text-2xl font-semibold mb-4">Add New Bike</h3>
@@ -22,14 +22,6 @@
               <input type="number" id="daily_rate" name="daily_rate" class="w-full p-2 border rounded" required>
             </div>
             <div>
-              <label for="weekly_rate" class="block text-gray-700">Weekly Rate (NPR)</label>
-              <input type="number" id="weekly_rate" name="weekly_rate" class="w-full p-2 border rounded" required>
-            </div>
-            <div>
-              <label for="monthly_rate" class="block text-gray-700">Monthly Rate (NPR)</label>
-              <input type="number" id="monthly_rate" name="monthly_rate" class="w-full p-2 border rounded" required>
-            </div>
-            <div>
               <label for="image_url" class="block text-gray-700">Image URL</label>
               <input type="text" id="image_url" name="image_url" class="w-full p-2 border rounded">
             </div>
@@ -41,35 +33,57 @@
       <div class="bg-white rounded-lg shadow-md p-6">
         <h3 class="text-2xl font-semibold mb-4">Bookings</h3>
         {% if bookings %}
-          <table class="w-full text-left">
-            <thead>
-              <tr>
-                <th class="p-2">User</th>
-                <th class="p-2">Bike</th>
-                <th class="p-2">Date</th>
-                <th class="p-2">Duration</th>
-                <th class="p-2">Status</th>
-                <th class="p-2">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {% for booking in bookings %}
-                <tr>
-                  <td class="p-2">{{ booking.user.email }}</td>
-                  <td class="p-2">{{ booking.bike.name }}</td>
-                  <td class="p-2">{{ booking.date }}</td>
-                  <td class="p-2">{{ booking.duration }}</td>
-                  <td class="p-2">{{ booking.status }}</td>
-                  <td class="p-2">
-                    <a href="{{ url_for('routes.update_booking', id=booking.id, action='approve') }}" class="text-green-600 hover:underline">Approve</a>
-                    <a href="{{ url_for('routes.update_booking', id=booking.id, action='cancel') }}" class="text-red-600 hover:underline ml-2">Cancel</a>
-                  </td>
+          <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+              <thead>
+                <tr class="bg-gray-100">
+                  <th class="p-4 text-gray-700 font-semibold">User</th>
+                  <th class="p-4 text-gray-700 font-semibold">Bike</th>
+                  <th class="p-4 text-gray-700 font-semibold">Start Date</th>
+                  <th class="p-4 text-gray-700 font-semibold">End Date</th>
+                  <th class="p-4 text-gray-700 font-semibold">Price (NPR)</th>
+                  <th class="p-4 text-gray-700 font-semibold">Name</th>
+                  <th class="p-4 text-gray-700 font-semibold">Address</th>
+                  <th class="p-4 text-gray-700 font-semibold">Contact</th>
+                  <th class="p-4 text-gray-700 font-semibold">Document</th>
+                  <th class="p-4 text-gray-700 font-semibold">Status</th>
+                  <th class="p-4 text-gray-700 font-semibold">Payment Status</th>
+                  <th class="p-4 text-gray-700 font-semibold">Conflict</th>
+                  <th class="p-4 text-gray-700 font-semibold">Actions</th>
                 </tr>
-              {% endfor %}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {% for booking in bookings %}
+                  <tr class="border-b hover:bg-gray-50">
+                    <td class="p-4">{{ booking.user.email }}</td>
+                    <td class="p-4">{{ booking.bike.name }}</td>
+                    <td class="p-4">{{ booking.start_date.strftime('%Y-%m-%d') }} (8:00 AM)</td>
+                    <td class="p-4">{{ booking.end_date.strftime('%Y-%m-%d') }} (6:00 PM)</td>
+                    <td class="p-4">{{ booking.total_price }}</td>
+                    <td class="p-4">{{ booking.name }}</td>
+                    <td class="p-4">{{ booking.address }}</td>
+                    <td class="p-4">{{ booking.contact }}</td>
+                    <td class="p-4"><a href="{{ url_for('routes.download_document', booking_id=booking.id) }}" class="text-blue-600 hover:underline">View</a></td>
+                    <td class="p-4">{{ booking.status }}</td>
+                    <td class="p-4">{{ booking.payment_status }}</td>
+                    <td class="p-4">
+                      {% if booking.conflicts %}
+                        <span class="text-red-600">Conflict Detected</span>
+                      {% else %}
+                        <span class="text-green-600">No Conflict</span>
+                      {% endif %}
+                    </td>
+                    <td class="p-4">
+                      <a href="{{ url_for('routes.update_booking', id=booking.id, action='approve') }}" class="text-green-600 hover:underline">Approve</a>
+                      <a href="{{ url_for('routes.update_booking', id=booking.id, action='cancel') }}" class="text-red-600 hover:underline ml-2">Cancel</a>
+                    </td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
         {% else %}
-          <p>No bookings yet.</p>
+          <p class="text-gray-600 text-center">No bookings yet.</p>
         {% endif %}
       </div>
     </div>

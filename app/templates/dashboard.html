@@ -10,18 +10,28 @@
             <thead>
               <tr>
                 <th class="p-2">Bike</th>
-                <th class="p-2">Date</th>
-                <th class="p-2">Duration</th>
+                <th class="p-2">Start Date</th>
+                <th class="p-2">End Date</th>
+                <th class="p-2">Price (NPR)</th>
                 <th class="p-2">Status</th>
+                <th class="p-2">Payment Status</th>
+                <th class="p-2">Action</th>
               </tr>
             </thead>
             <tbody>
               {% for booking in bookings %}
                 <tr>
                   <td class="p-2">{{ booking.bike.name }}</td>
-                  <td class="p-2">{{ booking.date }}</td>
-                  <td class="p-2">{{ booking.duration }}</td>
+                  <td class="p-2">{{ booking.start_date.strftime('%Y-%m-%d') }} (8:00 AM)</td>
+                  <td class="p-2">{{ booking.end_date.strftime('%Y-%m-%d') }} (6:00 PM)</td>
+                  <td class="p-2">{{ booking.total_price }}</td>
                   <td class="p-2">{{ booking.status }}</td>
+                  <td class="p-2">{{ booking.payment_status }}</td>
+                  <td class="p-2">
+                    {% if booking.status == 'Approved' and booking.payment_status == 'Pending' %}
+                      <a href="{{ url_for('routes.initiate_payment', booking_id=booking.id) }}" class="text-blue-600 hover:underline">Pay Now</a>
+                    {% endif %}
+                  </td>
                 </tr>
               {% endfor %}
             </tbody>

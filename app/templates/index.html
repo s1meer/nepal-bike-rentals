@@ -12,9 +12,11 @@
       <h2 class="text-3xl font-bold text-gray-800 mb-8 text-center">Bike Hire Rates</h2>
       <form method="POST" action="{{ url_for('routes.filter_bikes') }}" class="flex justify-center space-x-4 mb-8">
         <button type="submit" name="brand" value="all" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">All</button>
+        <button type="submit" name="brand" value="Pulsar" class="px-4 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300">Bajaj</button>
+        <button type="submit" name="brand" value="Yamaha" class="px-4 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300">Yamaha</button>
+        <button type="submit" name="brand" value="Hero" class="px-4 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300">Hero</button>
+        <button type="submit" name="brand" value="Apache" class="px-4 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300">TVS</button>
         <button type="submit" name="brand" value="Royal Enfield" class="px-4 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300">Royal Enfield</button>
-        <button type="submit" name="brand" value="Pulsar" class="px-4 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300">Pulsar</button>
-        <button type="submit" name="brand" value="Honda" class="px-4 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300">Honda</button>
       </form>
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
         {% for bike in bikes %}
@@ -22,24 +24,45 @@
             <img src="{{ bike.image_url or 'https://via.placeholder.com/400x300' }}" alt="{{ bike.name }}" class="w-full h-48 object-cover">
             <div class="p-4">
               <h3 class="text-xl font-semibold text-gray-800">{{ bike.name }}</h3>
-              <p class="text-gray-600">Daily: NPR {{ bike.daily_rate }} | Weekly: NPR {{ bike.weekly_rate }} | Monthly: NPR {{ bike.monthly_rate }}</p>
+              <p class="text-gray-600">Daily: NPR {{ bike.daily_rate }}</p>
               {% if current_user.is_authenticated %}
-                <form method="POST" action="{{ url_for('routes.book') }}">
+                <form method="POST" action="{{ url_for('routes.booking_details') }}">
                   <input type="hidden" name="bike_id" value="{{ bike.id }}">
                   <div class="mt-4">
-                    <label for="date_{{ bike.id }}" class="block text-gray-700">Rental Date</label>
-                    <input type="date" id="date_{{ bike.id }}" name="date" class="w-full p-2 border rounded">
+                    <label for="start_date_{{ bike.id }}" class="block text-gray-700">Start Date</label>
+                    <input type="date" id="start_date_{{ bike.id }}" name="start_date" class="w-full p-2 border rounded" required>
                   </div>
                   <div class="mt-4">
-                    <label for="duration_{{ bike.id }}" class="block text-gray-700">Duration</label>
-                    <select id="duration_{{ bike.id }}" name="duration" class="w-full p-2 border rounded">
-                      <option>Daily</option>
-                      <option>Weekly</option>
-                      <option>Monthly</option>
-                    </select>
+                    <label for="end_date_{{ bike.id }}" class="block text-gray-700">End Date</label>
+                    <input type="date" id="end_date_{{ bike.id }}" name="end_date" class="w-full p-2 border rounded" required>
                   </div>
-                  <button type="submit" class="mt-4 w-full bg-blue-600 text-white p-2 rounded hover:bg-blue-700">Book Now</button>
+                  <div class="mt-4">
+                    <p id="price_{{ bike.id }}" class="text-gray-600">Total Price: NPR <span>0</span></p>
+                  </div>
+                  <button type="submit" class="mt-4 w-full bg-blue-600 text-white p-2 rounded hover:bg-blue-700">Proceed to Details</button>
                 </form>
+                <script>
+                  // Calculate price based on days
+                  const startInput = document.getElementById('start_date_{{ bike.id }}');
+                  const endInput = document.getElementById('end_date_{{ bike.id }}');
+                  const priceDisplay = document.getElementById('price_{{ bike.id }}').querySelector('span');
+                  const dailyRate = {{ bike.daily_rate }};
+
+                  function calculatePrice() {
+                    const start = new Date(startInput.value);
+                    const end = new Date(endInput.value);
+                    if (start && end && end >= start) {
+                      const days = Math.ceil((end - start) / (1000 * 60 * 60 * 24)) + 1;
+                      const price = days * dailyRate;
+                      priceDisplay.textContent = price.toFixed(2);
+                    } else {
+                      priceDisplay.textContent = '0';
+                    }
+                  }
+
+                  startInput.addEventListener('change', calculatePrice);
+                  endInput.addEventListener('change', calculatePrice);
+                </script>
               {% else %}
                 <a href="{{ url_for('auth.login') }}" class="mt-4 inline-block w-full bg-blue-600 text-white p-2 rounded hover:bg-blue-700 text-center">Login to Book</a>
               {% endif %}
@@ -47,6 +70,19 @@
           </div>
         {% endfor %}
       </div>
-    </div>
-  </section>
+    </section>
+    <footer class="bg-gray-800 text-white py-8">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+        <h3 class="text-xl font-semibold mb-4">Pathao/InDrive Bike Rental Offer</h3>
+        <p class="mb-2">
+          <strong>English:</strong> For Pathao/InDrive services, we provide 125cc bikes in perfect condition with 40+ mileage. Available bikes include Saluto, Shine, Glamour, and Passion. Documents required: original citizenship, NPR 5,000 cash security deposit, photocopy of driving license, and 1 commercial bank cheque (all returned upon bike return). Payment: NPR 500/day, weekly payments required.
+        </p>
+        <p class="mb-4">
+          <strong>नेपाली:</strong> पठाओ/इनड्राइभ सेवाका लागि, हामी १२५ सीसीका ४०+ माइलेज भएका उत्कृष्ट अवस्थाका बाइकहरू प्रदान गर्छौं। उपलब्ध बाइकहरूमा सलुटो, शाइन, ग्ल्यामर, र प्यासन समावेश छन्। आवश्यक कागजातहरू: मूल नागरिकता, ५,००० रुपये नगद जमानत, ड्राइभिङ लाइसेन्सको फोटोकपी, र १ वटा कमर्शियल बैंकको चेक (बाइक फिर्ता गर्दा सबै फिर्ता गरिन्छ)। भुक्तानी: ५०० रुपये/दिन, साप्ताहिक भुक्तानी गर्नुपर्ने।
+        </p>
+        <p class="mb-2">For further information and bookings, please call our marketing team at:</p>
+        <p class="font-semibold">9802829195, 9809655756, 9844066207</p>
+        <p class="mt-4">© 2025 Nepal Bike Rentals. All rights reserved.</p>
+      </div>
+    </footer>
 {% endblock %}

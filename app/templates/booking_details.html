@@ -1,0 +1,33 @@
+{% extends 'base.html' %}
+{% block title %}Booking Details{% endblock %}
+{% block content %}
+  <section class="py-16">
+    <div class="max-w-md mx-auto px-4 sm:px-6 lg:px-8">
+      <h2 class="text-3xl font-bold text-gray-800 mb-8 text-center">Enter Booking Details</h2>
+      <form method="POST" action="{{ url_for('routes.submit_booking_details', bike_id=bike_id, start_date=start_date, end_date=end_date) }}" enctype="multipart/form-data" class="bg-white p-6 rounded-lg shadow-md">
+        <input type="hidden" name="bike_id" value="{{ bike_id }}">
+        <input type="hidden" name="start_date" value="{{ start_date }}">
+        <input type="hidden" name="end_date" value="{{ end_date }}">
+        <div class="space-y-4">
+          <div>
+            <label for="name" class="block text-gray-700">Full Name</label>
+            <input type="text" id="name" name="name" class="w-full p-2 border rounded" required>
+          </div>
+          <div>
+            <label for="address" class="block text-gray-700">Address</label>
+            <input type="text" id="address" name="address" class="w-full p-2 border rounded" required>
+          </div>
+          <div>
+            <label for="contact" class="block text-gray-700">Contact Number</label>
+            <input type="tel" id="contact" name="contact" class="w-full p-2 border rounded" required>
+          </div>
+          <div>
+            <label for="document" class="block text-gray-700">Driver’s License (PDF, max 5MB)</label>
+            <input type="file" id="document" name="document" accept=".pdf" class="w-full p-2 border rounded" required>
+          </div>
+          <button type="submit" class="w-full bg-blue-600 text-white p-2 rounded hover:bg-blue-700">Submit Booking</button>
+        </div>
+      </form>
+    </div>
+  </section>
+{% endblock %}

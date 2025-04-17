@@ -1,8 +1,9 @@
-flask
-flask-login
-flask-sqlalchemy
-email-validator
-requests
-twilio
-razorpay
-werkzeug
+flask==2.3.2
+flask-login==0.6.2
+flask-sqlalchemy==3.0.5
+email-validator==2.0.0
+requests==2.31.0
+werkzeug==2.3.6
+setuptools==70.0.0
+flask-mail==0.9.1
+ cryptography==42.0.5
