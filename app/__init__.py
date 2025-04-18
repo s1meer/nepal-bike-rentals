@@ -20,6 +20,11 @@ app.config['ESEWA_API_URL'] = 'https://rc-epay.esewa.com.np/api/epay/main/v2/for
 app.config['ESEWA_STATUS_URL'] = 'https://rc-epay.esewa.com.np/api/epay/transaction/status/'
 app.config['MAIL_PASSWORD'] = 'your-sendgrid-api-key'
 app.config['MAIL_USERNAME'] = 'apikey'
+app.config['ESEWA_MERCHANT_CODE'] = os.getenv('ESEWA_MERCHANT_CODE', 'EPAYTEST')
+#app.config['ESEWA_SECRET_KEY'] = os.getenv('ESEWA_SECRET_KEY', '8gBm/:&EnhH.1/q')
+#app.config['ESEWA_API_URL'] = os.getenv('ESEWA_API_URL', 'https://rc-epay.esewa.com.np/api/epay/main/v2/form')
+#app.config['ESEWA_STATUS_URL'] = os.getenv('ESEWA_STATUS_URL', 'https://rc-epay.esewa.com.np/api/epay/transaction/status/')
+app.config['MOCK_ESEWA'] = os.getenv('MOCK_ESEWA', 'True') == 'True'
 
 
 # Initialize extensions
