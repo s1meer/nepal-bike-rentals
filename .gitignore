@@ -1,0 +1,6 @@
+venv/
+*.pyc
+__pycache__/
+site.db
+*.sql
+*.bak
