@@ -2,24 +2,21 @@
 {% block title %}eSewa Payment{% endblock %}
 {% block content %}
   <section class="py-16">
-    <div class="max-w-md mx-auto px-4 sm:px-6 lg:px-8 text-center">
-      <h2 class="text-3xl font-bold text-gray-800 mb-8">Proceed to eSewa Payment</h2>
-      <p class="text-gray-600 mb-4">Click below to pay NPR {{ amount }} for your booking.</p>
-      <form action="{{ app.config['ESEWA_API_URL'] }}" method="POST">
-        <input type="hidden" name="amount" value="{{ amount }}">
-        <input type="hidden" name="tax_amount" value="0">
-        <input type="hidden" name="total_amount" value="{{ amount }}">
-        <input type="hidden" name="transaction_uuid" value="{{ transaction_uuid }}">
-        <input type="hidden" name="product_code" value="{{ product_code }}">
-        <input type="hidden" name="product_service_charge" value="0">
-        <input type="hidden" name="product_delivery_charge" value="0">
-        <input type="hidden" name="success_url" value="{{ success_url }}">
-        <input type="hidden" name="failure_url" value="{{ failure_url }}">
-        <input type="hidden" name="signed_field_names" value="total_amount,transaction_uuid,product_code">
-        <input type="hidden" name="signature" value="{{ signature }}">
-        <button type="submit" class="w-full bg-blue-600 text-white p-2 rounded hover:bg-blue-700">Pay with eSewa</button>
-      </form>
-      <p class="mt-4 text-gray-600">For assistance, contact our marketing team at: 9802829195, 9809655756, 9844066207</p>
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <h2 class="text-3xl font-bold text-gray-800 mb-8 text-center">Proceed to eSewa Payment</h2>
+      <div class="bg-white rounded-lg shadow-md p-6">
+        <form action="{{ esewa_api_url }}" method="POST">
+          <input type="hidden" name="amount" value="{{ amount }}">
+          <input type="hidden" name="tax_amount" value="0">
+          <input type="hidden" name="total_amount" value="{{ amount }}">
+          <input type="hidden" name="transaction_uuid" value="{{ transaction_uuid }}">
+          <input type="hidden" name="product_code" value="{{ product_code }}">
+          <input type="hidden" name="success_url" value="{{ success_url }}">
+          <input type="hidden" name="failure_url" value="{{ failure_url }}">
+          <input type="hidden" name="signature" value="{{ signature }}">
+          <button type="submit" class="w-full bg-blue-600 text-white p-2 rounded hover:bg-blue-700">Pay with eSewa</button>
+        </form>
+      </div>
     </div>
   </section>
 {% endblock %}

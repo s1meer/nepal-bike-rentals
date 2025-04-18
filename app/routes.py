@@ -78,7 +78,7 @@ def submit_booking_details(bike_id, start_date, end_date):
         filename = secure_filename(file.filename)
         file_path = os.path.join(upload_folder, filename)
         file.save(file_path)
-        relative_path = os.path.join('static', 'uploads', filename).replace('\\', '/')
+        relative_path = os.path.join('static', 'Uploads', filename).replace('\\', '/')
     else:
         flash('Invalid file. Upload a PDF less than 5MB.')
         return redirect(url_for('routes.index'))
@@ -176,7 +176,8 @@ def initiate_payment(booking_id):
                           product_code=product_code,
                           success_url=success_url,
                           failure_url=failure_url,
-                          signature=signature)
+                          signature=signature,
+                          esewa_api_url=app.config['ESEWA_API_URL'])
 
 @routes.route('/payment_success/<int:booking_id>')
 def payment_success(booking_id):
@@ -298,7 +299,7 @@ def add_bike():
         flash('Invalid daily rate.')
         return redirect(url_for('routes.admin'))
     image_url = request.form['image_url']
-    bike OmniAIBike(name=name, brand=brand, daily_rate=daily_rate, image_url=image_url)
+    bike = Bike(name=name, brand=brand, daily_rate=daily_rate, image_url=image_url)
     db.session.add(bike)
     db.session.commit()
     flash('Bike added successfully')
