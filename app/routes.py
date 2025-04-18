@@ -1,9 +1,9 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, send_file
 from flask_login import login_required, current_user
-from app.models import Bike, Booking, User
+from app.models import Bike, Booking, User, Notification
 from app import db, mail, app
 from flask_mail import Message
-from datetime import datetime, timedelta
+from datetime import datetime
 import os
 from werkzeug.utils import secure_filename
 import requests
@@ -48,7 +48,6 @@ def booking_details():
     start_date = datetime.strptime(request.form['start_date'], '%Y-%m-%d').date()
     end_date = datetime.strptime(request.form['end_date'], '%Y-%m-%d').date()
     
-    # Validate dates
     if end_date < start_date:
         flash('End date must be on or after start date.')
         return redirect(url_for('routes.index'))
@@ -64,12 +63,10 @@ def submit_booking_details(bike_id, start_date, end_date):
     address = request.form['address']
     contact = request.form['contact']
     
-    # Ensure uploads directory exists
     upload_folder = app.config['UPLOAD_FOLDER']
     if not os.path.exists(upload_folder):
         os.makedirs(upload_folder)
     
-    # Handle file upload
     if 'document' not in request.files:
         flash('No file uploaded.')
         return redirect(url_for('routes.index'))
@@ -81,16 +78,18 @@ def submit_booking_details(bike_id, start_date, end_date):
         filename = secure_filename(file.filename)
         file_path = os.path.join(upload_folder, filename)
         file.save(file_path)
+        relative_path = os.path.join('static', 'uploads', filename).replace('\\', '/')
     else:
         flash('Invalid file. Upload a PDF less than 5MB.')
         return redirect(url_for('routes.index'))
     
-    # Calculate price
     bike = Bike.query.get(bike_id)
+    if not bike:
+        flash('Bike not found.')
+        return redirect(url_for('routes.index'))
     days = (end_date - start_date).days + 1
     total_price = days * bike.daily_rate
     
-    # Check for conflicts
     conflicts = Booking.query.filter(
         Booking.bike_id == bike_id,
         Booking.status.in_(['Pending', 'Approved']),
@@ -99,10 +98,9 @@ def submit_booking_details(bike_id, start_date, end_date):
     ).all()
     
     if conflicts:
-        flash(f'This bike is already booked during the selected dates. Please choose another bike or dates.')
+        flash('This bike is already booked during the selected dates. Please choose another bike or dates.')
         return redirect(url_for('routes.index'))
     
-    # Create booking
     booking = Booking(
         user_id=current_user.id,
         bike_id=bike_id,
@@ -111,27 +109,29 @@ def submit_booking_details(bike_id, start_date, end_date):
         name=name,
         address=address,
         contact=contact,
-        document_path=file_path,
+        document_path=relative_path,
         total_price=total_price,
         transaction_uuid=str(uuid.uuid4())
     )
     db.session.add(booking)
     db.session.commit()
     
-    # Send email notification
-    msg = Message('Booking Submitted', recipients=[current_user.email])
-    msg.body = f"""
-    Dear {name},
+    try:
+        msg = Message('Booking Submitted', recipients=[current_user.email])
+        msg.body = f"""
+        Dear {name},
+        
+        Your booking for {bike.name} from {start_date} (8:00 AM) to {end_date} (6:00 PM) has been submitted and is pending admin approval.
+        Total Price: NPR {total_price}
+        
+        Regards,
+        Nepal Bike Rentals
+        """
+        mail.send(msg)
+        flash('Booking submitted! Awaiting admin approval. Check your email for confirmation.')
+    except Exception as e:
+        flash(f'Booking submitted, but email notification failed: {str(e)}')
     
-    Your booking for {bike.name} from {start_date} (8:00 AM) to {end_date} (6:00 PM) has been submitted and is pending admin approval.
-    Total Price: NPR {total_price}
-    
-    Regards,
-    Nepal Bike Rentals
-    """
-    mail.send(msg)
-    
-    flash('Booking submitted! Awaiting admin approval. Check your email for confirmation.')
     return redirect(url_for('routes.dashboard'))
 
 @routes.route('/initiate_payment/<int:booking_id>')
@@ -143,6 +143,9 @@ def initiate_payment(booking_id):
         return redirect(url_for('routes.dashboard'))
     
     bike = Bike.query.get(booking.bike_id)
+    if not bike:
+        flash('Bike not found.')
+        return redirect(url_for('routes.dashboard'))
     total_amount = booking.total_price
     transaction_uuid = booking.transaction_uuid
     product_code = app.config['ESEWA_MERCHANT_CODE']
@@ -152,18 +155,20 @@ def initiate_payment(booking_id):
     
     signature = generate_signature(total_amount, transaction_uuid, product_code, secret_key)
     
-    # Send email notification
-    msg = Message('Payment Initiated', recipients=[current_user.email])
-    msg.body = f"""
-    Dear {booking.name},
-    
-    Your booking for {bike.name} has been approved. Please complete the payment of NPR {total_amount} via eSewa.
-    You will be redirected to the eSewa payment page.
-    
-    Regards,
-    Nepal Bike Rentals
-    """
-    mail.send(msg)
+    try:
+        msg = Message('Payment Initiated', recipients=[current_user.email])
+        msg.body = f"""
+        Dear {booking.name},
+        
+        Your booking for {bike.name} has been approved. Please complete the payment of NPR {total_amount} via eSewa.
+        You will be redirected to the eSewa payment page.
+        
+        Regards,
+        Nepal Bike Rentals
+        """
+        mail.send(msg)
+    except Exception as e:
+        flash(f'Payment initiation started, but email notification failed: {str(e)}')
     
     return render_template('esewa_payment_form.html',
                           amount=total_amount,
@@ -180,42 +185,48 @@ def payment_success(booking_id):
         flash('Unauthorized access.')
         return redirect(url_for('routes.dashboard'))
     
-    # Verify payment with eSewa status API
-    response = requests.get(
-        f"{app.config['ESEWA_STATUS_URL']}?product_code={app.config['ESEWA_MERCHANT_CODE']}&total_amount={booking.total_price}&transaction_uuid={booking.transaction_uuid}"
-    )
-    if response.status_code == 200 and response.json().get('status') == 'COMPLETE':
-        booking.payment_status = 'Completed'
-        db.session.commit()
-        
-        # Send email notification
-        msg = Message('Payment Successful', recipients=[current_user.email])
-        msg.body = f"""
-        Dear {booking.name},
-        
-        Your payment of NPR {booking.total_price} for {booking.bike.name} from {booking.start_date} (8:00 AM) to {booking.end_date} (6:00 PM) was successful.
-        
-        Regards,
-        Nepal Bike Rentals
-        """
-        mail.send(msg)
-        flash('Payment successful! Booking confirmed.')
-    else:
-        booking.payment_status = 'Failed'
-        db.session.commit()
-        
-        # Send email notification
-        msg = Message('Payment Failed', recipients=[current_user.email])
-        msg.body = f"""
-        Dear {booking.name},
-        
-        Your payment for {booking.bike.name} failed. Please try again or contact support at 9802829195, 9809655756, 9844066207.
-        
-        Regards,
-        Nepal Bike Rentals
-        """
-        mail.send(msg)
-        flash('Payment failed. Please try again.')
+    try:
+        response = requests.get(
+            f"{app.config['ESEWA_STATUS_URL']}?product_code={app.config['ESEWA_MERCHANT_CODE']}&total_amount={booking.total_price}&transaction_uuid={booking.transaction_uuid}"
+        )
+        if response.status_code == 200 and response.json().get('status') == 'COMPLETE':
+            booking.payment_status = 'Completed'
+            db.session.commit()
+            
+            try:
+                msg = Message('Payment Successful', recipients=[current_user.email])
+                msg.body = f"""
+                Dear {booking.name},
+                
+                Your payment of NPR {booking.total_price} for {booking.bike.name} from {booking.start_date} (8:00 AM) to {booking.end_date} (6:00 PM) was successful.
+                
+                Regards,
+                Nepal Bike Rentals
+                """
+                mail.send(msg)
+                flash('Payment successful! Booking confirmed.')
+            except Exception as e:
+                flash(f'Payment successful, but email notification failed: {str(e)}')
+        else:
+            booking.payment_status = 'Failed'
+            db.session.commit()
+            
+            try:
+                msg = Message('Payment Failed', recipients=[current_user.email])
+                msg.body = f"""
+                Dear {booking.name},
+                
+                Your payment for {booking.bike.name} failed. Please try again or contact support at 9802829195, 9809655756, 9844066207.
+                
+                Regards,
+                Nepal Bike Rentals
+                """
+                mail.send(msg)
+                flash('Payment failed. Please try again.')
+            except Exception as e:
+                flash(f'Payment failed, and email notification failed: {str(e)}')
+    except Exception as e:
+        flash(f'Payment verification failed: {str(e)}')
     
     return redirect(url_for('routes.dashboard'))
 
@@ -229,25 +240,29 @@ def payment_failure(booking_id):
     booking.payment_status = 'Failed'
     db.session.commit()
     
-    # Send email notification
-    msg = Message('Payment Failed', recipients=[current_user.email])
-    msg.body = f"""
-    Dear {booking.name},
+    try:
+        msg = Message('Payment Failed', recipients=[current_user.email])
+        msg.body = f"""
+        Dear {booking.name},
+        
+        Your payment for {booking.bike.name} failed. Please try again or contact support at 9802829195, 9809655756, 9844066207.
+        
+        Regards,
+        Nepal Bike Rentals
+        """
+        mail.send(msg)
+        flash('Payment failed. Please try again.')
+    except Exception as e:
+        flash(f'Payment failed, and email notification failed: {str(e)}')
     
-    Your payment for {booking.bike.name} failed. Please try again or contact support at 9802829195, 9809655756, 9844066207.
-    
-    Regards,
-    Nepal Bike Rentals
-    """
-    mail.send(msg)
-    flash('Payment failed. Please try again.')
     return redirect(url_for('routes.dashboard'))
 
 @routes.route('/dashboard')
 @login_required
 def dashboard():
     bookings = Booking.query.filter_by(user_id=current_user.id).all()
-    return render_template('dashboard.html', bookings=bookings)
+    notifications = Notification.query.filter_by(user_id=current_user.id, is_read=False).order_by(Notification.created_at.desc()).all()
+    return render_template('dashboard.html', bookings=bookings, notifications=notifications)
 
 @routes.route('/admin')
 @login_required
@@ -273,12 +288,17 @@ def admin():
 @login_required
 def add_bike():
     if not current_user.is_admin:
+        flash('Admin access required')
         return redirect(url_for('routes.index'))
     name = request.form['name']
     brand = request.form['brand']
-    daily_rate = float(request.form['daily_rate'])
+    try:
+        daily_rate = float(request.form['daily_rate'])
+    except ValueError:
+        flash('Invalid daily rate.')
+        return redirect(url_for('routes.admin'))
     image_url = request.form['image_url']
-    bike = Bike(name=name, brand=brand, daily_rate=daily_rate, image_url=image_url)
+    bike OmniAIBike(name=name, brand=brand, daily_rate=daily_rate, image_url=image_url)
     db.session.add(bike)
     db.session.commit()
     flash('Bike added successfully')
@@ -288,15 +308,26 @@ def add_bike():
 @login_required
 def update_booking(id, action):
     if not current_user.is_admin:
+        flash('Admin access required')
         return redirect(url_for('routes.index'))
     booking = Booking.query.get(id)
+    if not booking:
+        flash('Booking not found.')
+        return redirect(url_for('routes.admin'))
     user = User.query.get(booking.user_id)
     bike = Bike.query.get(booking.bike_id)
+    if not user or not bike:
+        flash('Invalid user or bike associated with booking.')
+        return redirect(url_for('routes.admin'))
     
     if action == 'approve':
+        if booking.status.lower() != 'pending':
+            flash('Booking is not pending.')
+            return redirect(url_for('routes.admin'))
         booking.status = 'Approved'
-        msg = Message('Booking Approved', recipients=[user.email])
-        msg.body = f"""
+        notification_message = f"Your booking for {bike.name} from {booking.start_date} to {booking.end_date} has been approved."
+        email_subject = 'Booking Approved'
+        email_body = f"""
         Dear {booking.name},
         
         Your booking for {bike.name} from {booking.start_date} (8:00 AM) to {booking.end_date} (6:00 PM) has been approved.
@@ -306,9 +337,13 @@ def update_booking(id, action):
         Nepal Bike Rentals
         """
     elif action == 'cancel':
+        if booking.status.lower() != 'pending':
+            flash('Booking is not pending.')
+            return redirect(url_for('routes.admin'))
         booking.status = 'Cancelled'
-        msg = Message('Booking Cancelled', recipients=[user.email])
-        msg.body = f"""
+        notification_message = f"Your booking for {bike.name} from {booking.start_date} to {booking.end_date} has been cancelled."
+        email_subject = 'Booking Cancelled'
+        email_body = f"""
         Dear {booking.name},
         
         Sorry, your booking for {bike.name} from {booking.start_date} (8:00 AM) to {booking.end_date} (6:00 PM) has been cancelled due to a scheduling conflict.
@@ -317,16 +352,36 @@ def update_booking(id, action):
         Regards,
         Nepal Bike Rentals
         """
+    else:
+        flash('Invalid action.')
+        return redirect(url_for('routes.admin'))
+    
+    notification = Notification(
+        user_id=user.id,
+        message=notification_message
+    )
+    db.session.add(notification)
     db.session.commit()
-    mail.send(msg)
-    flash(f'Booking {action}d')
+    
+    try:
+        msg = Message(email_subject, recipients=[user.email])
+        msg.body = email_body
+        mail.send(msg)
+        flash(f'Booking {action}d successfully.')
+    except Exception as e:
+        flash(f'Booking {action}d, but email notification failed: {str(e)}')
+    
     return redirect(url_for('routes.admin'))
 
 @routes.route('/download_document/<int:booking_id>')
 @login_required
 def download_document(booking_id):
-    booking = Booking.query.get_or_404(booking_id)
     if not current_user.is_admin:
         flash('Admin access required')
         return redirect(url_for('routes.index'))
-    return send_file(booking.document_path, as_attachment=True)
+    booking = Booking.query.get_or_404(booking_id)
+    absolute_path = os.path.join(app.root_path, booking.document_path)
+    if not os.path.exists(absolute_path):
+        flash('Document not found.')
+        return redirect(url_for('routes.admin'))
+    return send_file(absolute_path, mimetype='application/pdf', as_attachment=False)

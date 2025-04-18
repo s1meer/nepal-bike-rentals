@@ -7,3 +7,4 @@ werkzeug==2.3.6
 setuptools==70.0.0
 flask-mail==0.9.1
  cryptography==42.0.5
+ sendgrid==6.9.7

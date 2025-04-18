@@ -10,14 +10,17 @@ app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///site.db'
 app.config['MAIL_SERVER'] = 'smtp.gmail.com'
 app.config['MAIL_PORT'] = 587
 app.config['MAIL_USE_TLS'] = True
-app.config['MAIL_USERNAME'] = 'sameer.ray.offical@gmail.com'  # Replace with your Gmail email
-app.config['MAIL_PASSWORD'] = '@jV-R8MMD75iKug'   # Replace with your new App Password
+app.config['MAIL_USERNAME'] = 'sameer.ray.official@gmail.com'
+app.config['MAIL_PASSWORD'] = 'qrstuvwxyzabcdefg'  # New App Password
 app.config['MAIL_DEFAULT_SENDER'] = 'sameer.ray.official@gmail.com'
 app.config['UPLOAD_FOLDER'] = 'app/static/uploads'
 app.config['ESEWA_MERCHANT_CODE'] = 'EPAYTEST'
 app.config['ESEWA_SECRET_KEY'] = '8gBm/:&EnhH.1/q'
 app.config['ESEWA_API_URL'] = 'https://rc-epay.esewa.com.np/api/epay/main/v2/form'
 app.config['ESEWA_STATUS_URL'] = 'https://rc-epay.esewa.com.np/api/epay/transaction/status/'
+app.config['MAIL_PASSWORD'] = 'your-sendgrid-api-key'
+app.config['MAIL_USERNAME'] = 'apikey'
+
 
 # Initialize extensions
 db = SQLAlchemy(app)

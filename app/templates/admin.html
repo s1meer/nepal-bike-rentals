@@ -55,8 +55,8 @@
               <tbody>
                 {% for booking in bookings %}
                   <tr class="border-b hover:bg-gray-50">
-                    <td class="p-4">{{ booking.user.email }}</td>
-                    <td class="p-4">{{ booking.bike.name }}</td>
+                    <td class="p-4">{{ booking.user.email if booking.user else 'Unknown' }}</td>
+                    <td class="p-4">{{ booking.bike.name if booking.bike else 'Unknown' }}</td>
                     <td class="p-4">{{ booking.start_date.strftime('%Y-%m-%d') }} (8:00 AM)</td>
                     <td class="p-4">{{ booking.end_date.strftime('%Y-%m-%d') }} (6:00 PM)</td>
                     <td class="p-4">{{ booking.total_price }}</td>
@@ -74,8 +74,12 @@
                       {% endif %}
                     </td>
                     <td class="p-4">
-                      <a href="{{ url_for('routes.update_booking', id=booking.id, action='approve') }}" class="text-green-600 hover:underline">Approve</a>
-                      <a href="{{ url_for('routes.update_booking', id=booking.id, action='cancel') }}" class="text-red-600 hover:underline ml-2">Cancel</a>
+                      {% if booking.status|lower == 'pending' %}
+                        <a href="{{ url_for('routes.update_booking', id=booking.id, action='approve') }}" class="text-green-600 hover:underline">Approve</a>
+                        <a href="{{ url_for('routes.update_booking', id=booking.id, action='cancel') }}" class="text-red-600 hover:underline ml-2">Cancel</a>
+                      {% else %}
+                        {{ booking.status }}
+                      {% endif %}
                     </td>
                   </tr>
                 {% endfor %}

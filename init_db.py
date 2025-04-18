@@ -29,3 +29,4 @@ with app.app_context():
     db.session.add(admin)
     db.session.commit()
     print("Database initialized with sample data.")
+    
