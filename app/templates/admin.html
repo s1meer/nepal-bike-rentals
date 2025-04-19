@@ -1,95 +1,143 @@
-{% extends 'base.html' %}
-{% block title %}Admin Panel{% endblock %}
-{% block content %}
-  <section class="py-16">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-      <h2 class="text-3xl font-bold text-gray-800 mb-8 text-center">Admin Panel</h2>
-      <!-- Add Bike -->
-      <div class="bg-white rounded-lg shadow-md p-6 mb-8">
-        <h3 class="text-2xl font-semibold mb-4">Add New Bike</h3>
-        <form method="POST" action="{{ url_for('routes.add_bike') }}">
-          <div class="space-y-4">
-            <div>
-              <label for="name" class="block text-gray-700">Bike Name</label>
-              <input type="text" id="name" name="name" class="w-full p-2 border rounded" required>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel - Nepal Bike Rentals</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-100">
+    <div class="container mx-auto p-4">
+        <h1 class="text-2xl font-bold mb-4">Admin Panel</h1>
+
+        <!-- Flash Messages -->
+        {% with messages = get_flashed_messages() %}
+            {% if messages %}
+                <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">
+                    {% for message in messages %}
+                        <p>{{ message }}</p>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+
+        <!-- Add Bike Form -->
+        <div class="mb-6">
+            <h2 class="text-xl font-semibold mb-2">Add Bike</h2>
+            <form method="POST" action="{{ url_for('routes.add_bike') }}" class="bg-white p-4 rounded-lg shadow-md">
+                <div class="mb-4">
+                    <label for="name" class="block text-sm font-medium text-gray-700">Name</label>
+                    <input type="text" id="name" name="name" required class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                </div>
+                <div class="mb-4">
+                    <label for="brand" class="block text-sm font-medium text-gray-700">Brand</label>
+                    <input type="text" id="brand" name="brand" required class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                </div>
+                <div class="mb-4">
+                    <label for="daily_rate" class="block text-sm font-medium text-gray-700">Daily Rate (NPR)</label>
+                    <input type="number" id="daily_rate" name="daily_rate" step="0.01" required class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                </div>
+                <div class="mb-4">
+                    <label for="image_url" class="block text-sm font-medium text-gray-700">Image URL</label>
+                    <input type="text" id="image_url" name="image_url" required class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                </div>
+                <button type="submit" class="bg-blue-600 text-white p-2 rounded hover:bg-blue-700">Add Bike</button>
+            </form>
+        </div>
+
+        <!-- Bookings -->
+        <div class="mb-6">
+            <h2 class="text-xl font-semibold mb-2">Bookings</h2>
+            <div class="overflow-x-auto">
+                <table class="min-w-full bg-white rounded-lg shadow-md">
+                    <thead>
+                        <tr class="bg-gray-200 text-gray-600 uppercase text-sm leading-normal">
+                            <th class="py-3 px-6 text-left">User</th>
+                            <th class="py-3 px-6 text-left">Bike</th>
+                            <th class="py-3 px-6 text-left">Start Date</th>
+                            <th class="py-3 px-6 text-left">End Date</th>
+                            <th class="py-3 px-6 text-left">Total Price (NPR)</th>
+                            <th class="py-3 px-6 text-left">Status</th>
+                            <th class="py-3 px-6 text-left">Payment Status</th>
+                            <th class="py-3 px-6 text-left">Document</th>
+                            <th class="py-3 px-6 text-left">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody class="text-gray-600 text-sm font-light">
+                        {% for booking in bookings %}
+                        <tr class="border-b border-gray-200 hover:bg-gray-100 {% if booking.conflicts %}bg-red-100{% endif %}">
+                            <td class="py-3 px-6 text-left">{{ booking.user.email }}</td>
+                            <td class="py-3 px-6 text-left">{{ booking.bike.name }}</td>
+                            <td class="py-3 px-6 text-left">{{ booking.start_date }} (8:00 AM)</td>
+                            <td class="py-3 px-6 text-left">{{ booking.end_date }} (6:00 PM)</td>
+                            <td class="py-3 px-6 text-left">{{ booking.total_price }}</td>
+                            <td class="py-3 px-6 text-left">{{ booking.status }}</td>
+                            <td class="py-3 px-6 text-left">{{ booking.payment_status }}</td>
+                            <td class="py-3 px-6 text-left">
+                                <a href="{{ url_for('routes.download_document', booking_id=booking.id) }}" class="text-blue-600 hover:underline">View Document</a>
+                            </td>
+                            <td class="py-3 px-6 text-left">
+                                {% if booking.status == 'Pending' %}
+                                <a href="{{ url_for('routes.update_booking', id=booking.id, action='approve') }}" class="text-green-600 hover:underline mr-2">Approve</a>
+                                <a href="{{ url_for('routes.update_booking', id=booking.id, action='cancel') }}" class="text-red-600 hover:underline">Cancel</a>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
             </div>
-            <div>
-              <label for="brand" class="block text-gray-700">Brand</label>
-              <input type="text" id="brand" name="brand" class="w-full p-2 border rounded" required>
+        </div>
+
+        <!-- Users -->
+        <div class="mb-6">
+            <h2 class="text-xl font-semibold mb-2">Users</h2>
+            <div class="overflow-x-auto">
+                <table class="min-w-full bg-white rounded-lg shadow-md">
+                    <thead>
+                        <tr class="bg-gray-200 text-gray-600 uppercase text-sm leading-normal">
+                            <th class="py-3 px-6 text-left">Email</th>
+                            <th class="py-3 px-6 text-left">Admin</th>
+                        </tr>
+                    </thead>
+                    <tbody class="text-gray-600 text-sm font-light">
+                        {% for user in users %}
+                        <tr class="border-b border-gray-200 hover:bg-gray-100">
+                            <td class="py-3 px-6 text-left">{{ user.email }}</td>
+                            <td class="py-3 px-6 text-left">{{ 'Yes' if user.is_admin else 'No' }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
             </div>
-            <div>
-              <label for="daily_rate" class="block text-gray-700">Daily Rate (NPR)</label>
-              <input type="number" id="daily_rate" name="daily_rate" class="w-full p-2 border rounded" required>
+        </div>
+
+        <!-- Bikes -->
+        <div>
+            <h2 class="text-xl font-semibold mb-2">Bikes</h2>
+            <div class="overflow-x-auto">
+                <table class="min-w-full bg-white rounded-lg shadow-md">
+                    <thead>
+                        <tr class="bg-gray-200 text-gray-600 uppercase text-sm leading-normal">
+                            <th class="py-3 px-6 text-left">Name</th>
+                            <th class="py-3 px-6 text-left">Brand</th>
+                            <th class="py-3 px-6 text-left">Daily Rate (NPR)</th>
+                            <th class="py-3 px-6 text-left">Image URL</th>
+                        </tr>
+                    </thead>
+                    <tbody class="text-gray-600 text-sm font-light">
+                        {% for bike in bikes %}
+                        <tr class="border-b border-gray-200 hover:bg-gray-100">
+                            <td class="py-3 px-6 text-left">{{ bike.name }}</td>
+                            <td class="py-3 px-6 text-left">{{ bike.brand }}</td>
+                            <td class="py-3 px-6 text-left">{{ bike.daily_rate }}</td>
+                            <td class="py-3 px-6 text-left">{{ bike.image_url }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
             </div>
-            <div>
-              <label for="image_url" class="block text-gray-700">Image URL</label>
-              <input type="text" id="image_url" name="image_url" class="w-full p-2 border rounded">
-            </div>
-            <button type="submit" class="w-full bg-blue-600 text-white p-2 rounded hover:bg-blue-700">Add Bike</button>
-          </div>
-        </form>
-      </div>
-      <!-- Manage Bookings -->
-      <div class="bg-white rounded-lg shadow-md p-6">
-        <h3 class="text-2xl font-semibold mb-4">Bookings</h3>
-        {% if bookings %}
-          <div class="overflow-x-auto">
-            <table class="w-full text-left border-collapse">
-              <thead>
-                <tr class="bg-gray-100">
-                  <th class="p-4 text-gray-700 font-semibold">User</th>
-                  <th class="p-4 text-gray-700 font-semibold">Bike</th>
-                  <th class="p-4 text-gray-700 font-semibold">Start Date</th>
-                  <th class="p-4 text-gray-700 font-semibold">End Date</th>
-                  <th class="p-4 text-gray-700 font-semibold">Price (NPR)</th>
-                  <th class="p-4 text-gray-700 font-semibold">Name</th>
-                  <th class="p-4 text-gray-700 font-semibold">Address</th>
-                  <th class="p-4 text-gray-700 font-semibold">Contact</th>
-                  <th class="p-4 text-gray-700 font-semibold">Document</th>
-                  <th class="p-4 text-gray-700 font-semibold">Status</th>
-                  <th class="p-4 text-gray-700 font-semibold">Payment Status</th>
-                  <th class="p-4 text-gray-700 font-semibold">Conflict</th>
-                  <th class="p-4 text-gray-700 font-semibold">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {% for booking in bookings %}
-                  <tr class="border-b hover:bg-gray-50">
-                    <td class="p-4">{{ booking.user.email if booking.user else 'Unknown' }}</td>
-                    <td class="p-4">{{ booking.bike.name if booking.bike else 'Unknown' }}</td>
-                    <td class="p-4">{{ booking.start_date.strftime('%Y-%m-%d') }} (8:00 AM)</td>
-                    <td class="p-4">{{ booking.end_date.strftime('%Y-%m-%d') }} (6:00 PM)</td>
-                    <td class="p-4">{{ booking.total_price }}</td>
-                    <td class="p-4">{{ booking.name }}</td>
-                    <td class="p-4">{{ booking.address }}</td>
-                    <td class="p-4">{{ booking.contact }}</td>
-                    <td class="p-4"><a href="{{ url_for('routes.download_document', booking_id=booking.id) }}" class="text-blue-600 hover:underline">View</a></td>
-                    <td class="p-4">{{ booking.status }}</td>
-                    <td class="p-4">{{ booking.payment_status }}</td>
-                    <td class="p-4">
-                      {% if booking.conflicts %}
-                        <span class="text-red-600">Conflict Detected</span>
-                      {% else %}
-                        <span class="text-green-600">No Conflict</span>
-                      {% endif %}
-                    </td>
-                    <td class="p-4">
-                      {% if booking.status|lower == 'pending' %}
-                        <a href="{{ url_for('routes.update_booking', id=booking.id, action='approve') }}" class="text-green-600 hover:underline">Approve</a>
-                        <a href="{{ url_for('routes.update_booking', id=booking.id, action='cancel') }}" class="text-red-600 hover:underline ml-2">Cancel</a>
-                      {% else %}
-                        {{ booking.status }}
-                      {% endif %}
-                    </td>
-                  </tr>
-                {% endfor %}
-              </tbody>
-            </table>
-          </div>
-        {% else %}
-          <p class="text-gray-600 text-center">No bookings yet.</p>
-        {% endif %}
-      </div>
+        </div>
     </div>
-  </section>
-{% endblock %}
+</body>
+</html>

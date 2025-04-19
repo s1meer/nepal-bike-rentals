@@ -39,7 +39,7 @@ try:
             Bike(name="Apache 200", brand="TVS", daily_rate=2250.0, image_url="/static/images/apache200.jpg"),
             Bike(name="NS200", brand="Bajaj", daily_rate=2250.0, image_url="/static/images/ns200.jpg"),
             Bike(name="FZ250", brand="Yamaha", daily_rate=2500.0, image_url="/static/images/fz250.jpg"),
-            Bike(name="Xpulse 200", brand="Hero", daily_rate=2500.0, image_url="/static/images/xpulse_200.jpg"),
+            Bike(name="Xpulse 200", brand="Hero", daily_rate=2500.0, image_url="/static/images/xpulse200.jpg"),
             Bike(name="Royal Enfield Classic 350", brand="Royal Enfield", daily_rate=3250.0, image_url="/static/images/royalenfieldclassic350.jpg"),
         ]
 

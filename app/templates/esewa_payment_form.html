@@ -1,22 +1,36 @@
-{% extends 'base.html' %}
-{% block title %}eSewa Payment{% endblock %}
-{% block content %}
-  <section class="py-16">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-      <h2 class="text-3xl font-bold text-gray-800 mb-8 text-center">Proceed to eSewa Payment</h2>
-      <div class="bg-white rounded-lg shadow-md p-6">
-        <form action="{{ esewa_api_url }}" method="POST">
-          <input type="hidden" name="amount" value="{{ amount }}">
-          <input type="hidden" name="tax_amount" value="0">
-          <input type="hidden" name="total_amount" value="{{ amount }}">
-          <input type="hidden" name="transaction_uuid" value="{{ transaction_uuid }}">
-          <input type="hidden" name="product_code" value="{{ product_code }}">
-          <input type="hidden" name="success_url" value="{{ success_url }}">
-          <input type="hidden" name="failure_url" value="{{ failure_url }}">
-          <input type="hidden" name="signature" value="{{ signature }}">
-          <button type="submit" class="w-full bg-blue-600 text-white p-2 rounded hover:bg-blue-700">Pay with eSewa</button>
-        </form>
-      </div>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>eSewa Payment - Nepal Bike Rentals</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-100">
+    <div class="container mx-auto p-4">
+        <h1 class="text-2xl font-bold mb-4">Complete Your Payment via eSewa</h1>
+        <div class="bg-white p-6 rounded-lg shadow-md">
+            <h2 class="text-xl font-semibold mb-2">Booking Details</h2>
+            <p class="mb-2"><strong>Bike:</strong> {{ bike_name }}</p>
+            <p class="mb-2"><strong>Start Date:</strong> {{ start_date }} (8:00 AM)</p>
+            <p class="mb-2"><strong>End Date:</strong> {{ end_date }} (6:00 PM)</p>
+            <p class="mb-4"><strong>Total Amount:</strong> NPR {{ amount }}</p>
+
+            <h2 class="text-xl font-semibold mb-2">Pay with eSewa</h2>
+            <p class="mb-4">Scan the QR code below or click the button to pay via eSewa.</p>
+            <div class="mb-4">
+                <img src="https://chart.googleapis.com/chart?cht=qr&chs=200x200&chl={{ qr_code_url | urlencode }}" alt="eSewa QR Code" class="mx-auto">
+            </div>
+            <form method="POST" action="{{ esewa_api_url }}" target="_blank">
+                <input type="hidden" name="amount" value="{{ amount }}">
+                <input type="hidden" name="transaction_uuid" value="{{ transaction_uuid }}">
+                <input type="hidden" name="product_code" value="{{ product_code }}">
+                <input type="hidden" name="success_url" value="{{ success_url }}">
+                <input type="hidden" name="failure_url" value="{{ failure_url }}">
+                <input type="hidden" name="signature" value="{{ signature }}">
+                <button type="submit" class="w-full bg-blue-600 text-white p-2 rounded hover:bg-blue-700">Pay with eSewa</button>
+            </form>
+        </div>
     </div>
-  </section>
-{% endblock %}
+</body>
+</html>

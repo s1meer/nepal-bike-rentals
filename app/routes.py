@@ -6,11 +6,13 @@ from flask_mail import Message
 from datetime import datetime
 import os
 from werkzeug.security import generate_password_hash
+from werkzeug.utils import secure_filename
 import requests
 import uuid
 import hmac
 import hashlib
 import base64
+import urllib.parse
 
 routes = Blueprint('routes', __name__)
 
@@ -73,21 +75,12 @@ def booking_details():
     
     return render_template('index.html', bikes=bikes)
 
-@routes.route('/submit_booking_details/<int:bike_id>/<start_date>/<end_date>', methods=['GET', 'POST'])
+@routes.route('/submit_booking_details/<int:bike_id>/<start_date>/<end_date>', methods=['POST'])
 @login_required
 def submit_booking_details(bike_id, start_date, end_date):
     print(f"DEBUG: Submitting booking for bike_id = {bike_id}")  # Debug log
     start_date = datetime.strptime(start_date, '%Y-%m-%d').date()
     end_date = datetime.strptime(end_date, '%Y-%m-%d').date()
-
-    if request.method == 'GET':
-        # Render a form for testing purposes when accessed via GET
-        bike = Bike.query.get(bike_id)
-        if not bike:
-            flash('Bike not found.')
-            return redirect(url_for('routes.index'))
-        return render_template('submit_booking_details.html', bike=bike, start_date=start_date, end_date=end_date)
-
     name = request.form['name']
     address = request.form['address']
     contact = request.form['contact']
@@ -218,6 +211,17 @@ def initiate_payment(booking_id):
         flash(f'Unable to connect to eSewa service: {str(e)}. Please try again later.')
         return redirect(url_for('routes.dashboard'))
     
+    # Generate eSewa QR code URL
+    payment_data = {
+        'amount': str(total_amount),
+        'transaction_uuid': transaction_uuid,
+        'product_code': product_code,
+        'signature': signature,
+        'success_url': success_url,
+        'failure_url': failure_url
+    }
+    qr_code_url = f"{current_app.config['ESEWA_API_URL']}?{urllib.parse.urlencode(payment_data)}"
+    
     try:
         msg = Message('Payment Initiated', recipients=[current_user.email])
         msg.body = f"""
@@ -240,7 +244,11 @@ def initiate_payment(booking_id):
                           success_url=success_url,
                           failure_url=failure_url,
                           signature=signature,
-                          esewa_api_url=current_app.config['ESEWA_API_URL'])
+                          esewa_api_url=current_app.config['ESEWA_API_URL'],
+                          qr_code_url=qr_code_url,
+                          bike_name=bike.name,
+                          start_date=booking.start_date,
+                          end_date=booking.end_date)
 
 @routes.route('/payment_success/<int:booking_id>')
 def payment_success(booking_id):
@@ -500,7 +508,7 @@ def init_db():
             Bike(name="NS200", brand="Bajaj", daily_rate=2250.0, image_url="/static/images/ns200.jpg"),
             Bike(name="FZ250", brand="Yamaha", daily_rate=2500.0, image_url="/static/images/fz250.jpg"),
             Bike(name="Xpulse 200", brand="Hero", daily_rate=2500.0, image_url="/static/images/xpulse_200.jpg"),
-            Bike(name="Royal Enfield Classic 350", brand="Royal Enfield", daily_rate=3250.0, image_url="/static/images/royal_enfield_classic_350.jpg"),
+            Bike(name="Royal Enfield Classic 350", brand="Royal Enfield", daily_rate=3250.0, image_url="/static/images/royalenfieldclassic350.jpg"),
         ]
         for bike in bikes:
             db.session.add(bike)
