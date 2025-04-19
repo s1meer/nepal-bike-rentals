@@ -52,7 +52,16 @@ def booking_details():
         flash('End date must be on or after start date.')
         return redirect(url_for('routes.index'))
     
-    return render_template('booking_details.html', bike_id=bike_id, start_date=start_date, end_date=end_date)
+    bike = Bike.query.get(bike_id)
+    if not bike:
+        flash('Bike not found.')
+        return redirect(url_for('routes.index'))
+    
+    # Calculate total price server-side
+    days = (end_date - start_date).days + 1  # Inclusive of start and end dates
+    total_price = days * bike.daily_rate
+    
+    return render_template('booking_details.html', bike_id=bike_id, start_date=start_date, end_date=end_date, bike=bike, days=days, total_price=total_price)
 
 @routes.route('/submit_booking_details/<int:bike_id>/<start_date>/<end_date>', methods=['POST'])
 @login_required
@@ -241,7 +250,7 @@ def payment_success(booking_id):
         # Add a notification for the user
         notification = Notification(
             user_id=booking.user_id,
-            message=f"Mock payment for {bike.name} from {booking.start_date} to {booking.end_date} was successful."
+            message=f"Mock payment for {booking.bike.name} from {booking.start_date} to {booking.end_date} was successful."
         )
         db.session.add(notification)
         db.session.commit()
@@ -324,7 +333,18 @@ def payment_failure(booking_id):
 def dashboard():
     bookings = Booking.query.filter_by(user_id=current_user.id).all()
     notifications = Notification.query.filter_by(user_id=current_user.id, is_read=False).order_by(Notification.created_at.desc()).all()
-    return render_template('dashboard.html', bookings=bookings, notifications=notifications)
+    
+    # Check eSewa API availability for user notice
+    esewa_unavailable = False
+    if not app.config.get('MOCK_ESEWA', False):
+        try:
+            response = requests.head(app.config['ESEWA_API_URL'], timeout=5)
+            if response.status_code not in (200, 301, 302):
+                esewa_unavailable = True
+        except requests.RequestException:
+            esewa_unavailable = True
+    
+    return render_template('dashboard.html', bookings=bookings, notifications=notifications, esewa_unavailable=esewa_unavailable)
 
 @routes.route('/admin')
 @login_required
