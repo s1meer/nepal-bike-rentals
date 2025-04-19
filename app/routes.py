@@ -73,12 +73,21 @@ def booking_details():
     
     return render_template('index.html', bikes=bikes)
 
-@routes.route('/submit_booking_details/<int:bike_id>/<start_date>/<end_date>', methods=['POST'])
+@routes.route('/submit_booking_details/<int:bike_id>/<start_date>/<end_date>', methods=['GET', 'POST'])
 @login_required
 def submit_booking_details(bike_id, start_date, end_date):
     print(f"DEBUG: Submitting booking for bike_id = {bike_id}")  # Debug log
     start_date = datetime.strptime(start_date, '%Y-%m-%d').date()
     end_date = datetime.strptime(end_date, '%Y-%m-%d').date()
+
+    if request.method == 'GET':
+        # Render a form for testing purposes when accessed via GET
+        bike = Bike.query.get(bike_id)
+        if not bike:
+            flash('Bike not found.')
+            return redirect(url_for('routes.index'))
+        return render_template('submit_booking_details.html', bike=bike, start_date=start_date, end_date=end_date)
+
     name = request.form['name']
     address = request.form['address']
     contact = request.form['contact']

@@ -7,7 +7,7 @@
     <!-- Debug: Display bike ID -->
     <p class="text-gray-500 text-sm">Bike ID: {{ bike.id }}</p>
 
-    <form method="POST" action="{{ url_for('routes.booking_details') }}" class="mt-4">
+    <form method="POST" action="{% if bike.selected_start_date and bike.selected_end_date %}{{ url_for('routes.submit_booking_details', bike_id=bike.id, start_date=bike.selected_start_date, end_date=bike.selected_end_date) }}{% else %}{{ url_for('routes.booking_details') }}{% endif %}" enctype="multipart/form-data" class="mt-4">
       <input type="hidden" name="bike_id" value="{{ bike.id }}">
       <div class="mb-4">
         <label for="start_date_{{ bike.id }}" class="block text-sm font-medium text-gray-700">Start Date</label>
@@ -20,11 +20,29 @@
       <div class="mb-4">
         <p id="total_price_{{ bike.id }}" class="text-gray-600">Total Price: NPR <span class="price-value">{{ bike.selected_total_price if bike.selected_total_price is defined else '0' }}</span></p>
       </div>
+
       {% if bike.selected_start_date and bike.selected_end_date %}
-        <a href="{{ url_for('routes.submit_booking_details', bike_id=bike.id, start_date=bike.selected_start_date, end_date=bike.selected_end_date) }}" class="w-full bg-blue-600 text-white p-2 rounded hover:bg-blue-700 text-center block">Proceed to Details</a>
-      {% else %}
-        <button type="submit" class="w-full bg-blue-600 text-white p-2 rounded hover:bg-blue-700">Proceed to Details</button>
+        <div class="mb-4">
+          <label for="name_{{ bike.id }}" class="block text-sm font-medium text-gray-700">Name</label>
+          <input type="text" id="name_{{ bike.id }}" name="name" required class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+        </div>
+        <div class="mb-4">
+          <label for="address_{{ bike.id }}" class="block text-sm font-medium text-gray-700">Address</label>
+          <input type="text" id="address_{{ bike.id }}" name="address" required class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+        </div>
+        <div class="mb-4">
+          <label for="contact_{{ bike.id }}" class="block text-sm font-medium text-gray-700">Contact Number</label>
+          <input type="text" id="contact_{{ bike.id }}" name="contact" required class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+        </div>
+        <div class="mb-4">
+          <label for="document_{{ bike.id }}" class="block text-sm font-medium text-gray-700">Upload Document (PDF, max 5MB)</label>
+          <input type="file" id="document_{{ bike.id }}" name="document" accept=".pdf" required class="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
+        </div>
       {% endif %}
+
+      <button type="submit" class="w-full bg-blue-600 text-white p-2 rounded hover:bg-blue-700">
+        {% if bike.selected_start_date and bike.selected_end_date %}Submit Booking{% else %}Proceed to Details{% endif %}
+      </button>
     </form>
   </div>
 {% else %}
