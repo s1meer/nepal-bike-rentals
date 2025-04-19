@@ -45,6 +45,7 @@ def filter_bikes():
 @login_required
 def booking_details():
     bike_id = request.form['bike_id']
+    print(f"DEBUG: Received bike_id = {bike_id}")  # Debug log
     start_date = datetime.strptime(request.form['start_date'], '%Y-%m-%d').date()
     end_date = datetime.strptime(request.form['end_date'], '%Y-%m-%d').date()
     
@@ -55,6 +56,7 @@ def booking_details():
     bike = Bike.query.get(bike_id)
     if not bike:
         flash('Bike not found.')
+        print(f"DEBUG: Bike with ID {bike_id} not found in database.")  # Debug log
         return redirect(url_for('routes.index'))
     
     # Calculate total price server-side
@@ -74,6 +76,7 @@ def booking_details():
 @routes.route('/submit_booking_details/<int:bike_id>/<start_date>/<end_date>', methods=['POST'])
 @login_required
 def submit_booking_details(bike_id, start_date, end_date):
+    print(f"DEBUG: Submitting booking for bike_id = {bike_id}")  # Debug log
     start_date = datetime.strptime(start_date, '%Y-%m-%d').date()
     end_date = datetime.strptime(end_date, '%Y-%m-%d').date()
     name = request.form['name']
@@ -103,6 +106,7 @@ def submit_booking_details(bike_id, start_date, end_date):
     bike = Bike.query.get(bike_id)
     if not bike:
         flash('Bike not found.')
+        print(f"DEBUG: Bike with ID {bike_id} not found in database during submit.")  # Debug log
         return redirect(url_for('routes.index'))
     days = (end_date - start_date).days + 1
     total_price = days * bike.daily_rate
