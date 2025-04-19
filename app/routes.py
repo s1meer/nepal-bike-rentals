@@ -391,9 +391,14 @@ def admin():
             Booking.end_date >= booking.start_date
         ).all()
         booking.conflicts = len(conflicts) > 0
+    
+    # Calculate booking counts
+    total_bookings = Booking.query.count()
+    unique_users = db.session.query(Booking.user_id).distinct().count()
+    
     users = User.query.all()
     bikes = Bike.query.all()
-    return render_template('admin.html', bookings=bookings, users=users, bikes=bikes)
+    return render_template('admin.html', bookings=bookings, users=users, bikes=bikes, total_bookings=total_bookings, unique_users=unique_users)
 
 @routes.route('/admin/add_bike', methods=['POST'])
 @login_required
@@ -484,6 +489,71 @@ def update_booking(id, action):
     
     return redirect(url_for('routes.admin'))
 
+@routes.route('/admin/resend_payment_qr/<int:booking_id>')
+@login_required
+def resend_payment_qr(booking_id):
+    if not current_user.is_admin:
+        flash('Admin access required')
+        return redirect(url_for('routes.index'))
+    
+    booking = Booking.query.get_or_404(booking_id)
+    if booking.status != 'Approved' or booking.payment_status != 'Pending':
+        flash('Booking is not approved or payment is not pending.')
+        return redirect(url_for('routes.admin'))
+    
+    user = User.query.get(booking.user_id)
+    bike = Bike.query.get(booking.bike_id)
+    if not user or not bike:
+        flash('Invalid user or bike associated with booking.')
+        return redirect(url_for('routes.admin'))
+    
+    total_amount = booking.total_price
+    transaction_uuid = booking.transaction_uuid
+    product_code = current_app.config['ESEWA_MERCHANT_CODE']
+    secret_key = current_app.config['ESEWA_SECRET_KEY']
+    success_url = url_for('routes.payment_success', booking_id=booking.id, _external=True)
+    failure_url = url_for('routes.payment_failure', booking_id=booking.id, _external=True)
+    
+    try:
+        signature = generate_signature(total_amount, transaction_uuid, product_code, secret_key)
+    except Exception as e:
+        flash(f'Failed to generate payment signature: {str(e)}')
+        return redirect(url_for('routes.admin'))
+    
+    # Generate eSewa QR code URL
+    payment_data = {
+        'amount': str(total_amount),
+        'transaction_uuid': transaction_uuid,
+        'product_code': product_code,
+        'signature': signature,
+        'success_url': success_url,
+        'failure_url': failure_url
+    }
+    qr_code_url = f"{current_app.config['ESEWA_API_URL']}?{urllib.parse.urlencode(payment_data)}"
+    
+    # Send email with QR code URL
+    try:
+        msg = Message('eSewa Payment QR Code', recipients=[user.email])
+        msg.body = f"""
+        Dear {booking.name},
+        
+        Your booking for {bike.name} from {booking.start_date} (8:00 AM) to {booking.end_date} (6:00 PM) requires payment of NPR {total_amount}.
+        Since direct payment failed, please scan the QR code at the following link to complete your payment via eSewa:
+        
+        QR Code URL: {qr_code_url}
+        
+        Alternatively, you can try paying again by logging into your dashboard.
+        
+        Regards,
+        Nepal Bike Rentals
+        """
+        mail.send(msg)
+        flash('Payment QR code sent to user’s email successfully.')
+    except Exception as e:
+        flash(f'Failed to send payment QR code email: {str(e)}')
+    
+    return redirect(url_for('routes.admin'))
+
 @routes.route('/download_document/<int:booking_id>')
 @login_required
 def download_document(booking_id):
@@ -508,7 +578,7 @@ def init_db():
             Bike(name="NS200", brand="Bajaj", daily_rate=2250.0, image_url="/static/images/ns200.jpg"),
             Bike(name="FZ250", brand="Yamaha", daily_rate=2500.0, image_url="/static/images/fz250.jpg"),
             Bike(name="Xpulse 200", brand="Hero", daily_rate=2500.0, image_url="/static/images/xpulse_200.jpg"),
-            Bike(name="Royal Enfield Classic 350", brand="Royal Enfield", daily_rate=3250.0, image_url="/static/images/royalenfieldclassic350.jpg"),
+            Bike(name="Royal Enfield Classic 350", brand="Royal Enfield", daily_rate=3250.0, image_url="/static/images/royal_enfield_classic_350.jpg"),
         ]
         for bike in bikes:
             db.session.add(bike)

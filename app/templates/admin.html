@@ -21,6 +21,24 @@
             {% endif %}
         {% endwith %}
 
+        <!-- Admin Contact Information -->
+        <div class="mb-6">
+            <h2 class="text-xl font-semibold mb-2">Admin Contact Information</h2>
+            <div class="bg-white p-4 rounded-lg shadow-md">
+                <p><strong>Contact Numbers:</strong> 9802829195, 9809655756, 9844066207</p>
+                <p><strong>Email:</strong> sameer.ray.official@gmail.com</p>
+            </div>
+        </div>
+
+        <!-- Booking Statistics -->
+        <div class="mb-6">
+            <h2 class="text-xl font-semibold mb-2">Booking Statistics</h2>
+            <div class="bg-white p-4 rounded-lg shadow-md">
+                <p><strong>Total Bookings:</strong> {{ total_bookings }}</p>
+                <p><strong>Unique Users:</strong> {{ unique_users }}</p>
+            </div>
+        </div>
+
         <!-- Add Bike Form -->
         <div class="mb-6">
             <h2 class="text-xl font-semibold mb-2">Add Bike</h2>
@@ -79,7 +97,10 @@
                             <td class="py-3 px-6 text-left">
                                 {% if booking.status == 'Pending' %}
                                 <a href="{{ url_for('routes.update_booking', id=booking.id, action='approve') }}" class="text-green-600 hover:underline mr-2">Approve</a>
-                                <a href="{{ url_for('routes.update_booking', id=booking.id, action='cancel') }}" class="text-red-600 hover:underline">Cancel</a>
+                                <a href="{{ url_for('routes.update_booking', id=booking.id, action='cancel') }}" class="text-red-600 hover:underline mr-2">Cancel</a>
+                                {% endif %}
+                                {% if booking.status == 'Approved' and booking.payment_status == 'Pending' %}
+                                <a href="{{ url_for('routes.resend_payment_qr', booking_id=booking.id) }}" class="text-blue-600 hover:underline">Resend QR Code</a>
                                 {% endif %}
                             </td>
                         </tr>
