@@ -61,7 +61,15 @@ def booking_details():
     days = (end_date - start_date).days + 1  # Inclusive of start and end dates
     total_price = days * bike.daily_rate
     
-    return render_template('booking_details.html', bike_id=bike_id, start_date=start_date, end_date=end_date, bike=bike, days=days, total_price=total_price)
+    # Update the bike object with the selected dates and total price for rendering
+    bikes = Bike.query.all()
+    bike_dict = {bike.id: bike for bike in bikes}
+    bike_dict[int(bike_id)].selected_start_date = start_date
+    bike_dict[int(bike_id)].selected_end_date = end_date
+    bike_dict[int(bike_id)].selected_days = days
+    bike_dict[int(bike_id)].selected_total_price = total_price
+    
+    return render_template('index.html', bikes=bikes)
 
 @routes.route('/submit_booking_details/<int:bike_id>/<start_date>/<end_date>', methods=['POST'])
 @login_required
