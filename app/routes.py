@@ -153,7 +153,40 @@ def initiate_payment(booking_id):
     success_url = url_for('routes.payment_success', booking_id=booking_id, _external=True)
     failure_url = url_for('routes.payment_failure', booking_id=booking_id, _external=True)
     
-    signature = generate_signature(total_amount, transaction_uuid, product_code, secret_key)
+    # Mock payment for testing (bypass eSewa sandbox)
+    if app.config.get('MOCK_ESEWA', False):
+        flash('eSewa service is currently unavailable. Using mock payment for testing.')
+        try:
+            msg = Message('Payment Initiated (Mock)', recipients=[current_user.email])
+            msg.body = f"""
+            Dear {booking.name},
+            
+            Your booking for {bike.name} has been approved. In production, you would complete the payment of NPR {total_amount} via eSewa.
+            Since eSewa is unavailable, a mock payment is being processed for testing.
+            
+            Regards,
+            Nepal Bike Rentals
+            """
+            mail.send(msg)
+        except Exception as e:
+            flash(f'Mock payment initiation started, but email notification failed: {str(e)}')
+        return redirect(url_for('routes.payment_success', booking_id=booking_id))
+    
+    try:
+        signature = generate_signature(total_amount, transaction_uuid, product_code, secret_key)
+    except Exception as e:
+        flash(f'Failed to generate payment signature: {str(e)}')
+        return redirect(url_for('routes.dashboard'))
+    
+    # Check eSewa API availability
+    try:
+        response = requests.head(app.config['ESEWA_API_URL'], timeout=5)
+        if response.status_code not in (200, 301, 302):
+            flash(f'eSewa service is unavailable (status {response.status_code}). Please try again later.')
+            return redirect(url_for('routes.dashboard'))
+    except requests.RequestException as e:
+        flash(f'Unable to connect to eSewa service: {str(e)}. Please try again later.')
+        return redirect(url_for('routes.dashboard'))
     
     try:
         msg = Message('Payment Initiated', recipients=[current_user.email])
@@ -184,6 +217,34 @@ def payment_success(booking_id):
     booking = Booking.query.get_or_404(booking_id)
     if booking.user_id != current_user.id:
         flash('Unauthorized access.')
+        return redirect(url_for('routes.dashboard'))
+    
+    # Mock payment bypass for testing
+    if app.config.get('MOCK_ESEWA', False):
+        booking.payment_status = 'Completed'
+        db.session.commit()
+        flash('Mock payment successful! Booking confirmed.')
+        try:
+            msg = Message('Mock Payment Successful', recipients=[current_user.email])
+            msg.body = f"""
+            Dear {booking.name},
+            
+            Your mock payment of NPR {booking.total_price} for {booking.bike.name} from {booking.start_date} (8:00 AM) to {booking.end_date} (6:00 PM) was successful.
+            In production, this would be processed via eSewa.
+            
+            Regards,
+            Nepal Bike Rentals
+            """
+            mail.send(msg)
+        except Exception as e:
+            flash(f'Mock payment successful, but email notification failed: {str(e)}')
+        # Add a notification for the user
+        notification = Notification(
+            user_id=booking.user_id,
+            message=f"Mock payment for {bike.name} from {booking.start_date} to {booking.end_date} was successful."
+        )
+        db.session.add(notification)
+        db.session.commit()
         return redirect(url_for('routes.dashboard'))
     
     try:

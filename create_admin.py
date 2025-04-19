@@ -11,7 +11,7 @@ with app.app_context():
         # Create new admin user
         new_admin = User(
             email='sameer.ray.official@gmail.com',
-            password=generate_password_hash('your_secure_password'),  # Replace with your password
+            password=generate_password_hash('sameer8848'),  # Replace with your password
             is_admin=True
         )
         db.session.add(new_admin)
