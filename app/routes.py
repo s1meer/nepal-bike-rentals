@@ -1,11 +1,11 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, send_file
+from flask import Blueprint, render_template, request, redirect, url_for, flash, send_file, current_app
 from flask_login import login_required, current_user
 from app.models import Bike, Booking, User, Notification
-from app import db, mail, app
+from app import db, mail
 from flask_mail import Message
 from datetime import datetime
 import os
-from werkzeug.utils import secure_filename
+from werkzeug.security import generate_password_hash
 import requests
 import uuid
 import hmac
@@ -80,7 +80,7 @@ def submit_booking_details(bike_id, start_date, end_date):
     address = request.form['address']
     contact = request.form['contact']
     
-    upload_folder = app.config['UPLOAD_FOLDER']
+    upload_folder = current_app.config['UPLOAD_FOLDER']
     if not os.path.exists(upload_folder):
         os.makedirs(upload_folder)
     
@@ -165,13 +165,13 @@ def initiate_payment(booking_id):
         return redirect(url_for('routes.dashboard'))
     total_amount = booking.total_price
     transaction_uuid = booking.transaction_uuid
-    product_code = app.config['ESEWA_MERCHANT_CODE']
-    secret_key = app.config['ESEWA_SECRET_KEY']
+    product_code = current_app.config['ESEWA_MERCHANT_CODE']
+    secret_key = current_app.config['ESEWA_SECRET_KEY']
     success_url = url_for('routes.payment_success', booking_id=booking_id, _external=True)
     failure_url = url_for('routes.payment_failure', booking_id=booking_id, _external=True)
     
     # Mock payment for testing (bypass eSewa sandbox)
-    if app.config.get('MOCK_ESEWA', False):
+    if current_app.config.get('MOCK_ESEWA', False):
         flash('eSewa service is currently unavailable. Using mock payment for testing.')
         try:
             msg = Message('Payment Initiated (Mock)', recipients=[current_user.email])
@@ -197,7 +197,7 @@ def initiate_payment(booking_id):
     
     # Check eSewa API availability
     try:
-        response = requests.head(app.config['ESEWA_API_URL'], timeout=5)
+        response = requests.head(current_app.config['ESEWA_API_URL'], timeout=5)
         if response.status_code not in (200, 301, 302):
             flash(f'eSewa service is unavailable (status {response.status_code}). Please try again later.')
             return redirect(url_for('routes.dashboard'))
@@ -227,7 +227,7 @@ def initiate_payment(booking_id):
                           success_url=success_url,
                           failure_url=failure_url,
                           signature=signature,
-                          esewa_api_url=app.config['ESEWA_API_URL'])
+                          esewa_api_url=current_app.config['ESEWA_API_URL'])
 
 @routes.route('/payment_success/<int:booking_id>')
 def payment_success(booking_id):
@@ -237,7 +237,7 @@ def payment_success(booking_id):
         return redirect(url_for('routes.dashboard'))
     
     # Mock payment bypass for testing
-    if app.config.get('MOCK_ESEWA', False):
+    if current_app.config.get('MOCK_ESEWA', False):
         booking.payment_status = 'Completed'
         db.session.commit()
         flash('Mock payment successful! Booking confirmed.')
@@ -266,7 +266,7 @@ def payment_success(booking_id):
     
     try:
         response = requests.get(
-            f"{app.config['ESEWA_STATUS_URL']}?product_code={app.config['ESEWA_MERCHANT_CODE']}&total_amount={booking.total_price}&transaction_uuid={booking.transaction_uuid}"
+            f"{current_app.config['ESEWA_STATUS_URL']}?product_code={current_app.config['ESEWA_MERCHANT_CODE']}&total_amount={booking.total_price}&transaction_uuid={booking.transaction_uuid}"
         )
         if response.status_code == 200 and response.json().get('status') == 'COMPLETE':
             booking.payment_status = 'Completed'
@@ -344,9 +344,9 @@ def dashboard():
     
     # Check eSewa API availability for user notice
     esewa_unavailable = False
-    if not app.config.get('MOCK_ESEWA', False):
+    if not current_app.config.get('MOCK_ESEWA', False):
         try:
-            response = requests.head(app.config['ESEWA_API_URL'], timeout=5)
+            response = requests.head(current_app.config['ESEWA_API_URL'], timeout=5)
             if response.status_code not in (200, 301, 302):
                 esewa_unavailable = True
         except requests.RequestException:
@@ -470,8 +470,45 @@ def download_document(booking_id):
         flash('Admin access required')
         return redirect(url_for('routes.index'))
     booking = Booking.query.get_or_404(booking_id)
-    absolute_path = os.path.join(app.root_path, booking.document_path)
+    absolute_path = os.path.join(current_app.root_path, booking.document_path)
     if not os.path.exists(absolute_path):
         flash('Document not found.')
         return redirect(url_for('routes.admin'))
     return send_file(absolute_path, mimetype='application/pdf', as_attachment=False)
+
+@routes.route('/init-db', methods=['GET'])
+def init_db():
+    if not Bike.query.first():
+        bikes = [
+            Bike(name="Pulsar 150", brand="Bajaj", daily_rate=1500.0, image_url="/static/images/pulsar_150.jpg"),
+            Bike(name="FZ 150 V2", brand="Yamaha", daily_rate=2000.0, image_url="/static/images/fz_150_v2.jpg"),
+            Bike(name="Pulsar 220", brand="Bajaj", daily_rate=2000.0, image_url="/static/images/pulsar_220.jpg"),
+            Bike(name="Apache 200", brand="TVS", daily_rate=2250.0, image_url="/static/images/apache_200.jpg"),
+            Bike(name="NS200", brand="Bajaj", daily_rate=2250.0, image_url="/static/images/ns200.jpg"),
+            Bike(name="FZ250", brand="Yamaha", daily_rate=2500.0, image_url="/static/images/fz250.jpg"),
+            Bike(name="Xpulse 200", brand="Hero", daily_rate=2500.0, image_url="/static/images/xpulse_200.jpg"),
+            Bike(name="Royal Enfield Classic 350", brand="Royal Enfield", daily_rate=3250.0, image_url="/static/images/royal_enfield_classic_350.jpg"),
+        ]
+        for bike in bikes:
+            db.session.add(bike)
+        db.session.commit()
+        print("Bikes added to the database.")
+    else:
+        print("Bikes already exist in the database, skipping bike initialization.")
+
+    if not User.query.filter_by(email="test@example.com").first():
+        test_user = User(email="test@example.com", password=generate_password_hash("password123"))
+        db.session.add(test_user)
+        print("Test user added.")
+    else:
+        print("Test user already exists, skipping.")
+
+    if not User.query.filter_by(email="admin@example.com").first():
+        admin = User(email="admin@example.com", password=generate_password_hash("admin123"), is_admin=True)
+        db.session.add(admin)
+        print("Admin user added.")
+    else:
+        print("Admin user already exists, skipping.")
+
+    db.session.commit()
+    return "Database initialized with sample data."
